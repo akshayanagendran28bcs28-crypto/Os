@@ -1,0 +1,65 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+
+// Helper function to check if a word is in wordDict
+bool isValidWord(const char* word, int len, char** wordDict, int wordDictSize) {
+    for (int i = 0; i < wordDictSize; i++) {
+        if (strlen(wordDict[i]) == len && strncmp(word, wordDict[i], len) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// DFS/Backtracking helper to build sentences
+void dfs(const char* s, int start, char** wordDict, int wordDictSize, 
+         char* currentPath, int pathLen, char*** result, int* returnSize, int* capacity) {
+    if (s[start] == '\0') {
+        currentPath[pathLen] = '\0';
+        if (*returnSize >= *capacity) {
+            *capacity *= 2;
+            *result = realloc(*result, (*capacity) * sizeof(char*));
+        }
+        (*result)[*returnSize] = strdup(currentPath);
+        (*returnSize)++;
+        return;
+    }
+    
+    for (int i = start; s[i] != '\0'; i++) {
+        int subLen = i - start + 1;
+        if (isValidWord(s + start, subLen, wordDict, wordDictSize)) {
+            // Append word to currentPath
+            int originalPathLen = pathLen;
+            if (pathLen > 0) {
+                currentPath[pathLen++] = ' ';
+            }
+            strncpy(currentPath + pathLen, s + start, subLen);
+            pathLen += subLen;
+            currentPath[pathLen] = '\0';
+            
+            dfs(s, i + 1, wordDict, wordDictSize, currentPath, pathLen, result, returnSize, capacity);
+            
+            // Backtrack
+            pathLen = originalPathLen;
+            currentPath[pathLen] = '\0';
+        }
+    }
+}
+
+// Main function required by LeetCode-style signatures
+char** wordBreak(char* s, char** wordDict, int wordDictSize, int* returnSize) {
+    *returnSize = 0;
+    int capacity = 10;
+    char** result = malloc(capacity * sizeof(char*));
+    
+    int sLen = strlen(s);
+    char* currentPath = malloc((sLen * 2 + 1) * sizeof(char));
+    currentPath[0] = '\0';
+    
+    dfs(s, 0, wordDict, wordDictSize, currentPath, 0, &result, returnSize, &capacity);
+    
+    free(currentPath);
+    return result;
+}
