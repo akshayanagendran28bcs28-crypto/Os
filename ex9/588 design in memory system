@@ -1,0 +1,83 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+
+typedef struct {
+    pthread_mutex_t mtx;    // Mutex lock to protect state access
+    pthread_cond_t cv;      // Condition variable to wake up waiting threads
+    int stage;              // Execution sequence tracker (1 -> 2 -> 3)
+} Foo;
+
+// Function Declarations, do not remove
+void printFirst();
+void printSecond();
+void printThird();
+
+Foo* fooCreate() {
+    Foo* obj = (Foo*) malloc(sizeof(Foo));
+    
+    // Initialize mutex and condition variable
+    pthread_mutex_init(&obj->mtx, NULL);
+    pthread_cond_init(&obj->cv, NULL);
+    
+    // Start at stage 1
+    obj->stage = 1;
+    
+    return obj;
+}
+
+void first(Foo* obj) {
+    pthread_mutex_lock(&obj->mtx);
+    
+    // printFirst() outputs "first". Do not change or remove this line.
+    printFirst();
+    
+    // Move to stage 2 and broadcast to wake up waiting threads
+    obj->stage = 2;
+    pthread_cond_broadcast(&obj->cv);
+    
+    pthread_mutex_unlock(&obj->mtx);
+}
+
+void second(Foo* obj) {
+    pthread_mutex_lock(&obj->mtx);
+    
+    // Wait until stage 1 finishes (stage becomes 2)
+    while (obj->stage != 2) {
+        pthread_cond_wait(&obj->cv, &obj->mtx);
+    }
+    
+    // printSecond() outputs "second". Do not change or remove this line.
+    printSecond();
+    
+    // Move to stage 3 and broadcast to wake up waiting threads
+    obj->stage = 3;
+    pthread_cond_broadcast(&obj->cv);
+    
+    pthread_mutex_unlock(&obj->mtx);
+}
+
+void third(Foo* obj) {
+    pthread_mutex_lock(&obj->mtx);
+    
+    // Wait until stage 2 finishes (stage becomes 3)
+    while (obj->stage != 3) {
+        pthread_cond_wait(&obj->cv, &obj->mtx);
+    }
+    
+    // printThird() outputs "third". Do not change or remove this line.
+    printThird();
+    
+    pthread_mutex_unlock(&obj->mtx);
+}
+
+void fooFree(Foo* obj) {
+    if (obj) {
+        // Destroy synchronization primitives to prevent resource leaks
+        pthread_mutex_destroy(&obj->mtx);
+        pthread_cond_destroy(&obj->cv);
+        
+        // Free allocated memory
+        free(obj);
+    }
+}
